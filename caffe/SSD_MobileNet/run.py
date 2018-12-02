@@ -10,12 +10,15 @@ import cv2
 import sys
 sys.path.insert(0, "../../ncapi2_shim")
 import mvnc_simple_api as mvnc
-
+import time
 dim=(300,300)
 EXAMPLES_BASE_DIR='../../'
 IMAGES_DIR = EXAMPLES_BASE_DIR + 'data/images/'
 IMAGE_FULL_PATH = IMAGES_DIR + 'nps_chair.png'
 
+vcap = cv2.VideoCapture(0)
+vcap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+vcap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 # ***************************************************************
 # Labels for the classifications for the network.
 # ***************************************************************
@@ -180,12 +183,14 @@ def main():
     if len(devices) == 0:
         print('No devices found')
         quit()
-
+    if len(devices) > 1:
+    	print("SO MANY DEVICES")
     # Pick the first stick to run the network
     device = mvnc.Device(devices[0])
-
+    device2 = mvnc.Device(devices[1])
     # Open the NCS
     device.OpenDevice()
+    device2.OpenDevice()
 
     # The graph file that was created with the ncsdk compiler
     graph_file_name = 'graph'
@@ -196,19 +201,29 @@ def main():
 
     # create the NCAPI graph instance from the memory buffer containing the graph file.
     graph = device.AllocateGraph(graph_in_memory)
-
+    graph2 = device.AllocateGraph(graph_in_memory)
     # read the image to run an inference on from the disk
-    infer_image = cv2.imread(IMAGE_FULL_PATH)
+    #infer_image = cv2.imread(IMAGE_FULL_PATH)
+    while(True):
+	    _, infer_image = vcap.read()
+	    # run a single inference on the image and overwrite the
+	    # boxes and labels
+	    run_inference(infer_image, graph)
+	    # display the results and wait for user to hit a key
+	    cv2.imshow(cv_window_name, infer_image)
+	    time.sleep(0.05)
+	    _, infer_image2 = vcap.read()
+	    # run a single inference on the image and overwrite the
+	    # boxes and labels
+	    run_inference(infer_image2, graph2)
+	    # display the results and wait for user to hit a key
+	    cv2.imshow(cv_window_name, infer_image2)
 
-    # run a single inference on the image and overwrite the
-    # boxes and labels
-    run_inference(infer_image, graph)
-
-    # display the results and wait for user to hit a key
-    cv2.imshow(cv_window_name, infer_image)
-    cv2.waitKey(0)
+	    if cv2.waitKey(1) & 0xFF == ord('q'):
+	        break
 
     # Clean up the graph and the device
+    vcap.release()
     graph.DeallocateGraph()
     device.CloseDevice()
 

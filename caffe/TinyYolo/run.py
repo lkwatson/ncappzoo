@@ -17,6 +17,7 @@ tiny_yolo_graph_file= './graph'
 NETWORK_IMAGE_WIDTH = 448
 NETWORK_IMAGE_HEIGHT = 448
 
+vcap = cv2.VideoCapture(0)
 
 # Interpret the output from a single inference of TinyYolo (GetResult)
 # and filter out objects/boxes with low probabilities.
@@ -239,15 +240,15 @@ def display_objects_in_gui(source_image, filtered_objects):
     window_name = 'TinyYolo (hit key to exit)'
     cv2.imshow(window_name, display_image)
 
-    while (True):
-        raw_key = cv2.waitKey(1)
+#    while (True):
+#        raw_key = cv2.waitKey(1)
 
         # check if the window is visible, this means the user hasn't closed
         # the window via the X button (may only work with opencv 3.x
-        prop_val = cv2.getWindowProperty(window_name, cv2.WND_PROP_ASPECT_RATIO)
-        if ((raw_key != -1) or (prop_val < 0.0)):
+#        prop_val = cv2.getWindowProperty(window_name, cv2.WND_PROP_ASPECT_RATIO)
+#        if ((raw_key != -1) or (prop_val < 0.0)):
             # the user hit a key or closed the window (in that order)
-            break
+#            break
 
 
 # This function is called from the entry point to do
@@ -273,25 +274,30 @@ def main():
     # Read image from file, resize it to network width and height
     # save a copy in display_image for display, then convert to float32, normalize (divide by 255),
     # and finally convert to convert to float16 to pass to LoadTensor as input for an inference
-    input_image = cv2.imread(input_image_file)
-    display_image = input_image
-    input_image = cv2.resize(input_image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT), cv2.INTER_LINEAR)
-    input_image = input_image.astype(np.float32)
-    input_image = np.divide(input_image, 255.0)
-    input_image = input_image[:, :, ::-1]  # convert to RGB
+    #input_image = cv2.imread(input_image_file)
+    while(True):
+	    _, input_image = vcap.read()
+	    display_image = input_image
+	    input_image = cv2.resize(input_image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT), cv2.INTER_LINEAR)
+	    input_image = input_image.astype(np.float32)
+	    input_image = np.divide(input_image, 255.0)
+	    input_image = input_image[:, :, ::-1]  # convert to RGB
 
-    # Load tensor and get result.  This executes the inference on the NCS
-    graph.queue_inference_with_fifo_elem(fifo_in, fifo_out, input_image.astype(np.float32), None)
-    output, userobj = fifo_out.read_elem()
+	    # Load tensor and get result.  This executes the inference on the NCS
+	    graph.queue_inference_with_fifo_elem(fifo_in, fifo_out, input_image.astype(np.float32), None)
+	    output, userobj = fifo_out.read_elem()
 
-    # filter out all the objects/boxes that don't meet thresholds
-    filtered_objs = filter_objects(output.astype(np.float32), input_image.shape[1], input_image.shape[0])
+	    # filter out all the objects/boxes that don't meet thresholds
+	    filtered_objs = filter_objects(output.astype(np.float32), input_image.shape[1], input_image.shape[0])
 
-    print('Displaying image with objects detected in GUI')
-    print('Click in the GUI window and hit any key to exit')
-    #display the filtered objects/boxes in a GUI window
-    display_objects_in_gui(display_image, filtered_objs)
+	    print('Displaying image with objects detected in GUI')
+	    print('Click in the GUI window and hit any key to exit')
+	    #display the filtered objects/boxes in a GUI window
+	    display_objects_in_gui(display_image, filtered_objs)
+	    if cv2.waitKey(1) & 0xFF == ord('q'):
+	        break
 
+    vcap.release()
     fifo_in.destroy()
     fifo_out.destroy()
     graph.destroy()
