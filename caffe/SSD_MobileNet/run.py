@@ -183,14 +183,10 @@ def main():
     if len(devices) == 0:
         print('No devices found')
         quit()
-    if len(devices) > 1:
-    	print("SO MANY DEVICES")
     # Pick the first stick to run the network
     device = mvnc.Device(devices[0])
-    device2 = mvnc.Device(devices[1])
     # Open the NCS
     device.OpenDevice()
-    device2.OpenDevice()
 
     # The graph file that was created with the ncsdk compiler
     graph_file_name = 'graph'
@@ -201,7 +197,6 @@ def main():
 
     # create the NCAPI graph instance from the memory buffer containing the graph file.
     graph = device.AllocateGraph(graph_in_memory)
-    graph2 = device.AllocateGraph(graph_in_memory)
     # read the image to run an inference on from the disk
     #infer_image = cv2.imread(IMAGE_FULL_PATH)
     while(True):
@@ -211,13 +206,6 @@ def main():
 	    run_inference(infer_image, graph)
 	    # display the results and wait for user to hit a key
 	    cv2.imshow(cv_window_name, infer_image)
-	    time.sleep(0.05)
-	    _, infer_image2 = vcap.read()
-	    # run a single inference on the image and overwrite the
-	    # boxes and labels
-	    run_inference(infer_image2, graph2)
-	    # display the results and wait for user to hit a key
-	    cv2.imshow(cv_window_name, infer_image2)
 
 	    if cv2.waitKey(1) & 0xFF == ord('q'):
 	        break
