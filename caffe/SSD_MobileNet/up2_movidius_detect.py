@@ -174,15 +174,6 @@ def main():
     cv_window_name = "SSD MobileNet - hit any key to exit"
     rospy.init_node('up2_mov')
 
-    infer_image = None
-    def CompImgCb(msg):
-        print("IMage!")
-	global infer_image
-        np_arr = np.fromstring(msg.data, np.uint8)
-        infer_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-    rospy.Subscriber('/tegra_camera_driver/cam_center/image_raw/compressed', CompressedImage, CompImgCb)
-
     # Get a list of ALL the sticks that are plugged in
     # we need at least one
     devices = mvnc.EnumerateDevices()
@@ -204,16 +195,19 @@ def main():
     # create the NCAPI graph instance from the memory buffer containing the graph file.
     graph = device.AllocateGraph(graph_in_memory)
 
+    def CompImgCb(msg):
+        print("IMage!")
+        np_arr = np.fromstring(msg.data, np.uint8)
+        infer_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        run_inference(infer_image, graph)
+        # display the results and wait for user to hit a key
+        cv2.imshow(cv_window_name, infer_image)
+
+    rospy.Subscriber('/tegra_camera_driver/cam_center/image_raw/compressed', CompressedImage, CompImgCb)
+
     while not rospy.is_shutdown():
-        if infer_image:
-            # run a single inference on the image and overwrite the
-            # boxes and labels
-            run_inference(infer_image, graph)
-            # display the results and wait for user to hit a key
-            cv2.imshow(cv_window_name, infer_image)
-        else:
-            print("No image yet")
-            time.sleep(0.2)
+        pass
 
     # Clean up the graph and the device
     graph.DeallocateGraph()
